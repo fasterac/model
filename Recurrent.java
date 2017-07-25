@@ -56,7 +56,7 @@ public class Recurrent {
 	
 	// constructor
 	public int epoch = 0;
-	public double loss = 0;
+	public double overallLoss = 0;
 	
 	private ArrayList<ArrayList<Node>> layers = new ArrayList<>();
 	
@@ -259,7 +259,7 @@ public class Recurrent {
 		}
 		
 		// updateInfo
-		double epochLoss = 0;
+		double loss = 0;
 		
 		ArrayList<Node> lastLayer = layers.get(layers.size() - 1);
 		
@@ -271,11 +271,11 @@ public class Recurrent {
 			
 			for (double nodeLoss : node.losses) sum += Math.abs(nodeLoss);
 			
-			epochLoss += sum / node.losses.size();
+			loss += sum / node.losses.size();
 			
 		}
 		
-		loss = (loss * epoch + epochLoss / lastLayer.size()) / (epoch + 1);
+		overallLoss = (overallLoss * epoch + loss / lastLayer.size()) / (epoch + 1);
 		
 		epoch++;
 		
