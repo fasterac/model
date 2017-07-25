@@ -55,6 +55,9 @@ public class Recurrent {
 	}
 	
 	// constructor
+	public int epoch = 0;
+	public double loss = 0;
+	
 	private ArrayList<ArrayList<Node>> layers = new ArrayList<>();
 	
 	public Recurrent(ArrayList<Integer> nodesInEachLayer) {
@@ -141,8 +144,6 @@ public class Recurrent {
 		
 		for (int t = 0; t < inputsSequence.size(); t++) {
 			
-			ArrayList<Double> inputs = inputsSequence.get(t);
-			
 			for (int i = 0; i < layers.size(); i++) {
 				
 				ArrayList<Node> layer = layers.get(i);
@@ -153,7 +154,7 @@ public class Recurrent {
 					
 					if (t == 0) node.resetValues();
 					
-					if (i == 0) node.addValue(inputs.get(j));
+					if (i == 0) node.addValue(inputsSequence.get(t).get(j));
 					
 					else {
 						
@@ -184,11 +185,7 @@ public class Recurrent {
 		// backPropagate
 		for (int t = outputsSequence.size() - 1; t >= 0; t--) {
 			
-			ArrayList<Double> outputs = outputsSequence.get(t);
-			
-			int numOfLayers = layers.size();
-			
-			for (int i = numOfLayers - 1; i > 0; i--) {
+			for (int i = layers.size() - 1; i > 0; i--) {
 				
 				ArrayList<Node> layer = layers.get(i);
 				
@@ -200,7 +197,7 @@ public class Recurrent {
 					
 					double sum = 0;
 					
-					if (i == numOfLayers - 1) sum += node.getValue(t) - outputs.get(j);
+					if (i == layers.size() - 1) sum += node.getValue(t) - outputsSequence.get(t).get(j);
 					
 					else {
 						
@@ -210,7 +207,7 @@ public class Recurrent {
 						
 					}
 					
-					if (t < outputsSequence.size() - 1) sum += node.getLoss(0);
+					if (t < outputsSequence.size() - 1) sum += node.getLoss(0) * node.getRecurrent();
 					
 					node.pushLoss(activatePrime(node.getValue(t)) * sum);
 					
@@ -260,6 +257,27 @@ public class Recurrent {
 			}
 			
 		}
+		
+		// updateInfo
+		double epochLoss = 0;
+		
+		ArrayList<Node> lastLayer = layers.get(layers.size() - 1);
+		
+		for (int i = 0; i < lastLayer.size(); i++) {
+			
+			Node node = lastLayer.get(i);
+			
+			double sum = 0;
+			
+			for (double nodeLoss : node.losses) sum += Math.abs(nodeLoss);
+			
+			epochLoss += sum / node.losses.size();
+			
+		}
+		
+		loss = (loss * epoch + epochLoss / lastLayer.size()) / (epoch + 1);
+		
+		epoch++;
 		
 	}
 	
