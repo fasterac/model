@@ -45,6 +45,9 @@ public class FeedForward {
 	}
 	
 	// constructor
+	public int epoch = 0;
+	public double overallLoss = 0;
+	
 	private ArrayList<ArrayList<Node>> layers = new ArrayList<>();
 	
 	public FeedForward(ArrayList<Integer> nodesInEachLayer) {
@@ -208,6 +211,17 @@ public class FeedForward {
 			}
 			
 		}
+		
+		// updateInfo
+		double loss = 0;
+		
+		ArrayList<Node> lastLayer = layers.get(layers.size() - 1);
+		
+		for (int i = 0; i < lastLayer.size(); i++) loss += Math.abs(lastLayer.get(i).getLoss());
+		
+		overallLoss = (overallLoss * epoch + loss / lastLayer.size()) / (epoch + 1);
+		
+		epoch++;
 		
 	}
 	
