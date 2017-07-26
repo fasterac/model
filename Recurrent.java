@@ -55,10 +55,13 @@ public class Recurrent {
 	}
 	
 	// constructor
-	public int epoch = 0;
-	public double overallLoss = 0;
-	
 	private ArrayList<ArrayList<Node>> layers = new ArrayList<>();
+	
+	private double rate = -0.01;
+
+	public int epoch = 0;
+	
+	public double overallLoss = 0;
 	
 	public Recurrent(ArrayList<Integer> nodesInEachLayer) {
 		
@@ -92,7 +95,7 @@ public class Recurrent {
 		
 		Scanner s = new Scanner(file);
 		
-		int numOfFormerNodes = 0;
+		int inputLayerSize = 0;
 		
 		int numOfLayers = s.nextInt();
 		
@@ -110,7 +113,7 @@ public class Recurrent {
 					
 					ArrayList<Double> weights = new ArrayList<>();
 					
-					for (int k = 0; k < numOfFormerNodes; k++) weights.add(s.nextDouble());
+					for (int k = 0; k < inputLayerSize; k++) weights.add(s.nextDouble());
 					
 					layer.add(new Node(weights, s.nextDouble(), s.nextDouble()));
 					
@@ -120,7 +123,7 @@ public class Recurrent {
 			
 			layers.add(layer);
 			
-			numOfFormerNodes = numOfNodes;
+			inputLayerSize = numOfNodes;
 			
 		}
 		
@@ -129,20 +132,16 @@ public class Recurrent {
 	}
 	
 	// utility
-	private double rate = -0.01;
-	
 	private Random r = new Random(3);
 	
 	private double randomDouble() { return (r.nextDouble() - 0.5) * 3; }
 	
-	private double activate(double x) { return Math.tanh(x); }
+	private double tanh(double x) { return Math.tanh(x); }
 	
-	private double activatePrime(double activatedx) { return 1 - Math.pow(activatedx, 2); }
+	private double tanhPrime(double tanhOfx) { return 1 - Math.pow(tanhOfx, 2); }
 	
 	// function
-	public void feedForward(ArrayList<ArrayList<Double>> inputsSequence) { feedForward(inputsSequence, 0); }
-	
-	public void feedForward(ArrayList<ArrayList<Double>> inputsSequence, int outputsExtension) {
+	public void feedForward(ArrayList<ArrayList<Double>> inputsSequence) {
 		
 		for (int t = 0; t < inputsSequence.size(); t++) {
 			
@@ -173,26 +172,11 @@ public class Recurrent {
 						
 						sum += node.getBias();
 						
-						node.addValue(activate(sum));
+						node.addValue(tanh(sum));
 						
 					}
 					
 				}
-				
-			}
-			
-			// extendOutputs
-			if (t == inputsSequence.size() - 1 && outputsExtension > 0) {
-				
-				ArrayList<Double> lastResult = new ArrayList<>();
-				
-				ArrayList<ArrayList<Double>> result = getResult();
-				
-				for (int i = 0; i < result.size(); i++) lastResult.add(result.get(i).get(t));
-				
-				inputsSequence.add(lastResult);
-				
-				outputsExtension--;
 				
 			}
 			
@@ -229,7 +213,7 @@ public class Recurrent {
 					
 					if (t < outputsSequence.size() - 1) sum += node.getLoss(0) * node.getRecurrent();
 					
-					node.pushLoss(activatePrime(node.getValue(t)) * sum);
+					node.pushLoss(tanhPrime(node.getValue(t)) * sum);
 					
 				}
 				
