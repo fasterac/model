@@ -140,9 +140,14 @@ public class Recurrent {
 	private double activatePrime(double activatedx) { return 1 - Math.pow(activatedx, 2); }
 	
 	// function
-	public void feedForward(ArrayList<ArrayList<Double>> inputsSequence) {
+	public void feedForward(ArrayList<ArrayList<Double>> inputsSequence) { feedForward(inputsSequence, 0); }
+	
+	public void feedForward(ArrayList<ArrayList<Double>> inputsSequence, int outputsExtension) {
 		
 		for (int t = 0; t < inputsSequence.size(); t++) {
+			
+			// feedForward
+			ArrayList<Double> inputs = inputsSequence.get(t);
 			
 			for (int i = 0; i < layers.size(); i++) {
 				
@@ -154,7 +159,7 @@ public class Recurrent {
 					
 					if (t == 0) node.resetValues();
 					
-					if (i == 0) node.addValue(inputsSequence.get(t).get(j));
+					if (i == 0) node.addValue(inputs.get(j));
 					
 					else {
 						
@@ -173,6 +178,17 @@ public class Recurrent {
 					}
 					
 				}
+				
+			}
+			
+			// extendOutputs
+			if (t == inputsSequence.size() - 1 && outputsExtension > 0) {
+				
+				ArrayList<ArrayList<Double>> result = getResult();
+				
+				inputsSequence.add(result.get(result.size() - 1));
+				
+				outputsExtension--;
 				
 			}
 			
