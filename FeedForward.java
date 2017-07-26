@@ -45,10 +45,13 @@ public class FeedForward {
 	}
 	
 	// constructor
-	public int epoch = 0;
-	public double overallLoss = 0;
-	
 	private ArrayList<ArrayList<Node>> layers = new ArrayList<>();
+	
+	private double rate = -0.01;
+	
+	public int epoch = 0;
+	
+	public double overallLoss = 0;
 	
 	public FeedForward(ArrayList<Integer> nodesInEachLayer) {
 		
@@ -119,15 +122,13 @@ public class FeedForward {
 	}
 	
 	// utility
-	private double rate = -0.01;
-	
 	private Random r = new Random(3);
 	
 	private double randomDouble() { return (r.nextDouble() - 0.5) * 3; }
 	
-	private double activate(double x) { return Math.tanh(x); }
+	private double tanh(double x) { return Math.tanh(x); }
 	
-	private double activatePrime(double activatedx) { return 1 - Math.pow(activatedx, 2); }
+	private double tanhPrime(double tanhOfx) { return 1 - Math.pow(tanhOfx, 2); }
 	
 	// function
 	public void feedForward(ArrayList<Double> inputs) {
@@ -152,7 +153,7 @@ public class FeedForward {
 					
 					sum += node.getBias();
 					
-					node.setValue(activate(sum));
+					node.setValue(tanh(sum));
 					
 				}
 				
@@ -175,7 +176,7 @@ public class FeedForward {
 				
 				Node node = layer.get(j);
 				
-				if (i == numOfLayers - 1) node.setLoss(activatePrime(node.getValue()) * (node.getValue() - outputs.get(j)));
+				if (i == numOfLayers - 1) node.setLoss(tanhPrime(node.getValue()) * (node.getValue() - outputs.get(j)));
 				
 				else {
 					
@@ -185,7 +186,7 @@ public class FeedForward {
 					
 					for (int k = 0; k < outputLayer.size(); k++) sum += outputLayer.get(k).getLoss() * outputLayer.get(k).getWeight(j);
 					
-					node.setLoss(activatePrime(node.getValue()) * sum);
+					node.setLoss(tanhPrime(node.getValue()) * sum);
 					
 				}
 				
