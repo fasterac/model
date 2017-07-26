@@ -184,9 +184,13 @@ public class Recurrent {
 			// extendOutputs
 			if (t == inputsSequence.size() - 1 && outputsExtension > 0) {
 				
+				ArrayList<Double> lastResult = new ArrayList<>();
+				
 				ArrayList<ArrayList<Double>> result = getResult();
 				
-				inputsSequence.add(result.get(result.size() - 1));
+				for (int i = 0; i < result.size(); i++) lastResult.add(result.get(i).get(t));
+				
+				inputsSequence.add(lastResult);
 				
 				outputsExtension--;
 				
@@ -301,7 +305,9 @@ public class Recurrent {
 		
 		ArrayList<ArrayList<Double>> result = new ArrayList<>();
 		
-		for (int i = 0; i < layers.get(layers.size() - 1).size(); i++) result.add(layers.get(layers.size() - 1).get(i).values);
+		ArrayList<Node> lastLayer = layers.get(layers.size() - 1);
+		
+		for (int i = 0; i < lastLayer.size(); i++) result.add(lastLayer.get(i).values);
 		
 		return result;
 		
