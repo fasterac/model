@@ -22,13 +22,16 @@ public class LongShortTermMemory {
 		private ArrayList<Double> writeLosses;
 		private ArrayList<Double> losses;
 		
-		public Node() { this(new ArrayList<Double>(), 0, 0); }
+		public Node() { this(new ArrayList<Double>(), 0, 0, 0, 0, 0); }
 		
-		public Node(ArrayList<Double> weights, double memory, double bias) {
+		public Node(ArrayList<Double> weights, double memory, double bias, double read, double forget, double write) {
 			
 			this.weights = weights;
 			this.memory = memory;
 			this.bias = bias;
+			this.read = read;
+			this.forget = forget;
+			this.write = write;
 			
 		}
 		
@@ -103,6 +106,34 @@ public class LongShortTermMemory {
 	
 	public double overallError = 0;
 	
+	public LongShortTermMemory(ArrayList<Integer> nodesInEachLayer) {
+		
+		for (int i = 0; i < nodesInEachLayer.size(); i++) {
+			
+			ArrayList<Node> layer = new ArrayList<>();
+			
+			for (int j = 0; j < nodesInEachLayer.get(i); j++) {
+				
+				if (i == 0) layer.add(new Node());
+				
+				else {
+					
+					ArrayList<Double> weights = new ArrayList<>();
+					
+					for (int k = 0; k < nodesInEachLayer.get(i - 1); k++) weights.add(randomDouble());
+					
+					layer.add(new Node(weights, randomDouble(), randomDouble(), randomDouble(), randomDouble(), randomDouble()));
+					
+				}
+				
+			}
+			
+			layers.add(layer);
+			
+		}
+		
+	}
+	
 	// utility
 	private Random r = new Random(3);
 	
@@ -156,9 +187,9 @@ public class LongShortTermMemory {
 						
 						node.addTanh(value);
 						
-						value = value * sigmoid * node.read;
+						value *= sigmoid * node.read;
 						
-						if (t > 0) value = value + sigmoid * node.forget * node.getForget(t - 1);
+						if (t > 0) value += sigmoid * node.forget * node.getForget(t - 1);
 						
 						node.addForget(value);
 						
@@ -191,35 +222,53 @@ public class LongShortTermMemory {
 					
 					if (t == outputsSequence.size() - 1) node.resetLoss();
 					
+					double tanh = node.getTanh(t);
+					
 					double sigmoid = node.getSigmoid(t);
 					
-					double loss = 0;
+					double valueLoss = 0;
 					
-					if (i == layers.size() - 1) loss = node.getValue(t) - outputs.get(j);
+					if (i == layers.size() - 1) valueLoss += node.getValue(t) - outputs.get(j);
 					
 					else {
 						
 						ArrayList<Node> outputLayer = layers.get(i + 1);
 						
-						for (int k = 0; k < outputLayer.size(); k++) loss += outputLayer.get(k).getLoss(t);
+						for (int k = 0; k < outputLayer.size(); k++) valueLoss += outputLayer.get(k).getLoss(0) * outputLayer.get(k).getWeight(j);
 						
 					}
 					
-					loss = tanhPrime(node.getValue(t)) * loss;
+					if (t < outputsSequence.size() - 1) valueLoss += node.getLoss(0) * node.memory;
 					
-					node.pushWriteLoss(node.getForget(t) * loss);
+					valueLoss = tanhPrime(node.getValue(t)) * valueLoss;
 					
-					loss = sigmoid * node.write * loss;
+					node.pushWriteLoss(node.getForget(t) * valueLoss);
 					
-					if (t < outputsSequence.size() - 1) loss = loss + (node.getForgetLoss(0) / node.getForget(t)) * node.getSigmoid(t + 1);
+					valueLoss = sigmoid * node.write * valueLoss;
 					
-					node.pushForgetLoss(node.getForget(t - 1) * loss);
+					if (t < outputsSequence.size() - 1) valueLoss = valueLoss + (node.getForgetLoss(0) / node.getForget(t)) * (node.getSigmoid(t + 1) * node.forget);
 					
-					node.pushReadLoss(node.getTanh(t) * loss);
+					if (t > 0) node.pushForgetLoss(node.getForget(t - 1) * valueLoss);
 					
-					loss = sigmoid * node.read * loss;
+					node.pushReadLoss(tanh * valueLoss);
 					
-					node.pushLoss(loss);
+					valueLoss = sigmoid * node.read * valueLoss;
+					
+					valueLoss = tanhPrime(tanh) * valueLoss;
+					
+					double gateLoss = 0;
+					
+					gateLoss += node.getWriteLoss(0) * node.write;
+					
+					if (t > 0) gateLoss += node.getForget(0) * node.forget;
+					
+					gateLoss += node.getReadLoss(0) * node.read;
+					
+					gateLoss = sigmoidPrime(sigmoid) * gateLoss;
+					
+					valueLoss += gateLoss;
+					
+					node.pushLoss(valueLoss);
 					
 				}
 				
@@ -228,7 +277,7 @@ public class LongShortTermMemory {
 		}
 		
 		// adjustWeights
-		for (int i = layers.size() - 1; i > 0; i++) {
+		for (int i = layers.size() - 1; i > 0; i--) {
 			
 			ArrayList<Node> layer = layers.get(i);
 			
@@ -260,15 +309,17 @@ public class LongShortTermMemory {
 				
 				for (int t = 0; t < outputsSequence.size(); t++) {
 					
+					double sigmoid = node.getSigmoid(t);
+					
 					if (t > 0) deltaMemory += node.getValue(t - 1) * node.getLoss(t);
 					
 					deltaBias += node.getLoss(t);
 					
-					deltaRead += node.getReadLoss(t);
+					deltaRead += sigmoid * node.getReadLoss(t);
 
-					deltaForget += node.getForgetLoss(t);
+					if (t > 0) deltaForget += sigmoid * node.getForgetLoss(t - 1);
 
-					deltaWrite += node.getWriteLoss(t);
+					deltaWrite += sigmoid * node.getWriteLoss(t);
 					
 				}
 				
@@ -306,6 +357,18 @@ public class LongShortTermMemory {
 		overallError = (overallError * epoch + error / lastLayer.size()) / (epoch + 1);
 		
 		epoch++;
+		
+	}
+	
+	public ArrayList<ArrayList<Double>> getResult() {
+		
+		ArrayList<ArrayList<Double>> result = new ArrayList<>();
+		
+		ArrayList<Node> lastLayer = layers.get(layers.size() - 1);
+		
+		for (int i = 0; i < lastLayer.size(); i++) result.add(lastLayer.get(i).values);
+		
+		return result;
 		
 	}
 	
